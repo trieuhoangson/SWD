@@ -17,7 +17,7 @@ namespace SWD
         }
 
         // GET: Borrow/Index
-        public async Task<IActionResult> Index(int? userId = 3)
+        public async Task<IActionResult> Index(int? userId)
         {
             var borrows = _context.BorrowTransactions
                 .Include(b => b.User)
