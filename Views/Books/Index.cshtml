@@ -1,0 +1,147 @@
+﻿@{
+    Layout = "_Layout";
+}
+@model IEnumerable<SWD.Models.Book>
+
+@{
+    ViewData["Title"] = "Book List";
+    var search = ViewData["Search"] as string;
+    var sort = ViewData["Sort"] as string;
+}
+
+<div class="container mt-5 mb-5">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-gradient bg-primary text-white text-center rounded-top-4 py-3">
+            <h2 class="fw-bold mb-0">📚 Book List</h2>
+        </div>
+
+        <div class="card-body p-4 bg-light rounded-bottom-4">
+
+            <!-- 🔍 Search + Sort Form -->
+            <form method="get" asp-action="Index" class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <input type="text" name="search" value="@search" class="form-control shadow-sm"
+                           placeholder="Search by title or author..." />
+                </div>
+
+                <div class="col-md-4">
+                    <select name="sort" class="form-select shadow-sm">
+                        <option value="">Sort by Title (A-Z)</option>
+                        <option value="title_desc" @(sort == "title_desc" ? "selected" : "")>Sort by Title (Z-A)</option>
+                        <option value="year" @(sort == "year" ? "selected" : "")>Sort by Year</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 text-end">
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </form>
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info text-center fs-5 shadow-sm mt-3">
+                    No books available in the library.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle bg-white shadow-sm rounded-3">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th>#</th>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>Publisher</th>
+                                <th>Year</th>
+                                <th>Category</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int index = 1;
+                            }
+                            @foreach (var book in Model)
+                            {
+                                <tr>
+                                    <td class="text-center fw-semibold">@index</td>
+                                    <td class="fw-semibold">@book.Title</td>
+                                    <td>@(book.Author ?? "N/A")</td>
+                                    <td>@(book.Publisher ?? "N/A")</td>
+                                    <td class="text-center">@book.PublicationYear</td>
+                                    <td class="text-center">@book.Cat?.CatName</td>
+                                    <td class="text-center">
+                                        <a asp-action="Details" asp-route-id="@book.BookId"
+                                           class="btn btn-sm btn-outline-info me-2 shadow-sm">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                        @if (book.Quantity > 0)
+                                        {
+                                            <a asp-action="Borrow" asp-route-id="@book.BookId"
+                                               class="btn btn-sm btn-outline-success shadow-sm">
+                                                <i class="bi bi-book"></i> Borrow
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                                index++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa, #e3f2fd);
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        .card {
+            border-radius: 1rem;
+        }
+
+        table thead th {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        table tbody td {
+            font-size: 15px;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f0f8ff !important;
+            transition: 0.3s;
+        }
+
+        .badge {
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+        }
+
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
+
+            .btn:hover {
+                transform: scale(1.05);
+            }
+
+        .alert-info {
+            border-left: 5px solid #0d6efd;
+        }
+
+        form .form-control, form .form-select {
+            border-radius: 0.75rem;
+        }
+    </style>
+}

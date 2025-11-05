@@ -18,6 +18,7 @@ public partial class User
     public string? Status { get; set; }
 
     public string Role { get; set; } = null!;
+    public string Password { get; set; } = string.Empty;
 
     public virtual ICollection<BorrowTransaction> BorrowTransactionLibrarians { get; set; } = new List<BorrowTransaction>();
 

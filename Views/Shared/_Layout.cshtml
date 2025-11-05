@@ -26,8 +26,24 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link text-white" asp-controller="Books" asp-action="Index">Books</a></li>
                     <li class="nav-item"><a class="nav-link text-white" asp-controller="Borrow" asp-action="Index">Borrow</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" asp-controller="Account" asp-action="Login">Login</a></li>
+
+                    @if (User.Identity?.IsAuthenticated ?? false)
+                    {
+                        <li class="nav-item">
+                            <span class="nav-link text-white">Hi, @User.Identity!.Name</span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-sm btn-outline-light ms-2" href="/Account/Logout">Logout</a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item"><a class="nav-link text-white" href="/Account/Login">Login</a></li>
+                        <li class="nav-item"><a class="nav-link text-white" href="/Account/Register">Sign up</a></li>
+                    }
+
                 </ul>
+
             </div>
         </div>
     </nav>

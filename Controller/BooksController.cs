@@ -30,9 +30,17 @@ namespace SWD.Controllers
                 "year" => books.OrderBy(b => b.PublicationYear),
                 _ => books.OrderBy(b => b.Title)
             };
-
-            ViewData["Title"] = "Book List"; // ✅ đảm bảo ViewData không null
+            ViewData["Search"] = search;
+            ViewData["Sort"] = sort;
+            ViewData["Title"] = "Book List"; 
             return View(await books.ToListAsync());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Borrow(int? bookid)
+        {
+           
+            return View();
         }
 
         // GET: Books/Details/5
