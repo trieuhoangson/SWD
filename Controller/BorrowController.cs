@@ -17,7 +17,7 @@ namespace SWD
         }
 
         // GET: Borrow/Index
-        public async Task<IActionResult> Index(int? userId)
+        public async Task<IActionResult> Index(int? userId = null)
         {
             var borrows = _context.BorrowTransactions
                 .Include(b => b.User)
@@ -25,10 +25,55 @@ namespace SWD
                 .ThenInclude(d => d.Book)
                 .AsQueryable();
 
+            // If userId not provided, default to current logged-in user
+            if (userId == null)
+            {
+                var claim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(claim, out var uid)) userId = uid;
+            }
+
             if (userId != null)
+            {
                 borrows = borrows.Where(b => b.UserId == userId);
+            }
 
             return View(await borrows.ToListAsync());
+        }
+
+        // POST: Borrow/Approve/5 (admin approves -> Borrowing)
+        [HttpPost]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var borrow = await _context.BorrowTransactions.Include(b => b.BorrowDetails)
+                .FirstOrDefaultAsync(b => b.BorrowId == id);
+            if (borrow == null) return NotFound();
+
+            if (borrow.Status == "Processing")
+            {
+                borrow.Status = "Borrowing";
+                // For simplicity, assign LibrarianId to current user if available, else admin id 1
+                int librarianId = 1;
+                var claimId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(claimId, out var cid)) librarianId = cid;
+                borrow.LibrarianId = librarianId;
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST: Borrow/Reject/5 (admin cancels request)
+        [HttpPost]
+        public async Task<IActionResult> Reject(int id)
+        {
+            var borrow = await _context.BorrowTransactions.FirstOrDefaultAsync(b => b.BorrowId == id);
+            if (borrow == null) return NotFound();
+
+            if (borrow.Status == "Processing")
+            {
+                borrow.Status = "Rejected";
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Borrow/Renew/5

@@ -16,6 +16,18 @@
         </div>
 
         <div class="card-body p-4 bg-light rounded-bottom-4">
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @TempData["Error"]
+                </div>
+            }
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success" role="alert">
+                    @TempData["Success"]
+                </div>
+            }
 
             <!-- 🔍 Search + Sort Form -->
             <form method="get" asp-action="Index" class="row g-3 mb-4">
@@ -27,8 +39,22 @@
                 <div class="col-md-4">
                     <select name="sort" class="form-select shadow-sm">
                         <option value="">Sort by Title (A-Z)</option>
-                        <option value="title_desc" @(sort == "title_desc" ? "selected" : "")>Sort by Title (Z-A)</option>
-                        <option value="year" @(sort == "year" ? "selected" : "")>Sort by Year</option>
+                        @if (sort == "title_desc")
+                        {
+                            <option value="title_desc" selected>Sort by Title (Z-A)</option>
+                        }
+                        else
+                        {
+                            <option value="title_desc">Sort by Title (Z-A)</option>
+                        }
+                        @if (sort == "year")
+                        {
+                            <option value="year" selected>Sort by Year</option>
+                        }
+                        else
+                        {
+                            <option value="year">Sort by Year</option>
+                        }
                     </select>
                 </div>
 
@@ -80,10 +106,9 @@
                                         </a>
                                         @if (book.Quantity > 0)
                                         {
-                                            <a asp-action="Borrow" asp-route-id="@book.BookId"
-                                               class="btn btn-sm btn-outline-success shadow-sm">
+                                            <button type="button" data-book-id="@book.BookId" class="btn btn-sm btn-outline-success shadow-sm js-borrow">
                                                 <i class="bi bi-book"></i> Borrow
-                                            </a>
+                                            </button>
                                         }
                                     </td>
                                 </tr>
@@ -94,6 +119,34 @@
                 </div>
             }
 
+        </div>
+    </div>
+</div>
+
+<!-- Borrow Confirmation Modal -->
+<div class="modal fade" id="borrowModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Borrow</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-2">
+                    <div class="col-6"><strong>Title:</strong> <span id="m-title"></span></div>
+                    <div class="col-6"><strong>Author:</strong> <span id="m-author"></span></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-6"><strong>Publisher:</strong> <span id="m-publisher"></span></div>
+                    <div class="col-3"><strong>Year:</strong> <span id="m-year"></span></div>
+                    <div class="col-3"><strong>Category:</strong> <span id="m-category"></span></div>
+                </div>
+                <div class="alert alert-warning d-none" id="m-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="m-confirm">Confirm</button>
+            </div>
         </div>
     </div>
 </div>
@@ -144,4 +197,47 @@
             border-radius: 0.75rem;
         }
     </style>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            let selectedBookId = null;
+            const modalEl = document.getElementById('borrowModal');
+            let modal;
+            document.addEventListener('click', async function (e) {
+                const btn = e.target.closest('.js-borrow');
+                if (!btn) return;
+                selectedBookId = btn.getAttribute('data-book-id');
+                const res = await fetch(`/Books/BorrowCheck?id=${selectedBookId}`);
+                const data = await res.json();
+                if (!data.ok) {
+                    alert(data.msg || 'Cannot borrow.');
+                    return;
+                }
+                document.getElementById('m-title').textContent = data.book.title || '';
+                document.getElementById('m-author').textContent = data.book.author || '';
+                document.getElementById('m-publisher').textContent = data.book.publisher || '';
+                document.getElementById('m-year').textContent = data.book.year || '';
+                document.getElementById('m-category').textContent = data.book.category || '';
+                document.getElementById('m-error').classList.add('d-none');
+                modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            });
+
+            document.getElementById('m-confirm').addEventListener('click', async function () {
+                if (!selectedBookId) return;
+                const res = await fetch(`/Books/RequestBorrow?id=${selectedBookId}`, { method: 'POST' });
+                const data = await res.json();
+                if (!data.ok) {
+                    const msgEl = document.getElementById('m-error');
+                    msgEl.textContent = data.msg || 'Request failed.';
+                    msgEl.classList.remove('d-none');
+                    return;
+                }
+                if (modal) modal.hide();
+                if (data.redirect) window.location.href = data.redirect;
+            });
+        })();
+    </script>
 }

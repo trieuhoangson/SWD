@@ -75,21 +75,13 @@ namespace SWD.Controllers
             return RedirectToAction("Index", "Books");
         }
 
-        [HttpGet]
-        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
-        public async Task<IActionResult> Logout()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LogoutPost()
         {
-
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-            foreach (var key in Request.Cookies.Keys)
-                Response.Cookies.Delete(key);
-
-            return RedirectToAction("Login", "Account");
+            return RedirectToAction(nameof(Login));
         }
-
-
 
 
         private async Task SignIn(User user, bool remember)

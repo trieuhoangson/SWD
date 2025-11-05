@@ -16,26 +16,26 @@
 
             @if (!Model.Any())
             {
-                    <div class="alert alert-info text-center fs-5 shadow-sm mt-3">
-                        You have no borrowed books at the moment.
-                    </div>
+                <div class="alert alert-info text-center fs-5 shadow-sm mt-3">
+                    You have no borrowed books at the moment.
+                </div>
             }
             else
             {
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered align-middle bg-white shadow-sm rounded-3">
-                            <thead class="table-primary text-center">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Book Title</th>
-                                    <th>Borrow Date</th>
-                                    <th>Due Date</th>
-                                    <th>Status</th>
-                                    <th>Fine (VND)</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle bg-white shadow-sm rounded-3">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th>#</th>
+                                <th>Book Title</th>
+                                <th>Borrow Date</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Fine (VND)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             @{
                                 int index = 1;
                             }
@@ -44,50 +44,75 @@
                                 foreach (var detail in borrow.BorrowDetails)
                                 {
                                     var isOverdue = borrow.DueDate < DateTime.Now && borrow.Status != "Returned";
-                                            <tr class="@(isOverdue ? "table-danger bg-opacity-75" : "")">
-                                                <td class="text-center fw-semibold">@index</td>
-                                                <td class="fw-semibold">@detail.Book.Title</td>
-                                                <td>@borrow.BorrowDate.ToString("dd/MM/yyyy")</td>
-                                                <td>@borrow.DueDate.ToString("dd/MM/yyyy")</td>
-                                                <td class="text-center">
-                                            @if (isOverdue)
+                                    <tr class="@(isOverdue ? "table-danger bg-opacity-75" : "")">
+                                        <td class="text-center fw-semibold">@index</td>
+                                        <td class="fw-semibold">@detail.Book.Title</td>
+                                        <td>@borrow.BorrowDate.ToString("dd/MM/yyyy")</td>
+                                        <td>@borrow.DueDate.ToString("dd/MM/yyyy")</td>
+                                        <td class="text-center">
+                                            @if (borrow.Status == "Processing")
                                             {
-                                                            <span class="badge bg-danger bg-gradient px-3 py-2">Overdue</span>
+                                                <span class="badge bg-secondary text-light px-3 py-2">Processing</span>
+                                            }
+                                            else if (borrow.Status == "Borrowing" || borrow.Status == "Borrowed")
+                                            {
+                                                <span class="badge bg-warning text-dark px-3 py-2">Borrowing</span>
+                                            }
+                                            else if (isOverdue)
+                                            {
+                                                <span class="badge bg-danger bg-gradient px-3 py-2">Overdue</span>
                                             }
                                             else if (borrow.Status == "Returned")
                                             {
-                                                            <span class="badge bg-success bg-gradient px-3 py-2">Returned</span>
+                                                <span class="badge bg-success bg-gradient px-3 py-2">Returned</span>
                                             }
                                             else
                                             {
-                                                            <span class="badge bg-warning text-dark px-3 py-2">Borrowed</span>
+                                                <span class="badge bg-info text-dark px-3 py-2">Unknown</span>
                                             }
-                                                </td>
-                                                <td class="text-end fw-bold text-danger">
+                                        </td>
+                                        <td class="text-end fw-bold text-danger">
                                             @(borrow.FineAmount.HasValue ? borrow.FineAmount.Value.ToString("N0") : "0")
-                                                </td>
-                                                <td class="text-center">
-                                            @if (borrow.Status == "Borrowed")
+                                        </td>
+                                        <td class="text-center">
+                                            @{
+                                                var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                                                var isAdmin = userIdClaim == "1"; // simple admin check per your note
+                                            }
+                                            @if (borrow.Status == "Processing" && isAdmin)
                                             {
-                                                            <a asp-action="Renew" asp-route-id="@borrow.BorrowId" class="btn btn-sm btn-outline-primary me-2 shadow-sm">
-                                                                <i class="bi bi-arrow-clockwise"></i> Renew
-                                                            </a>
-                                                            <a asp-action="ReturnBook" asp-route-id="@borrow.BorrowId" class="btn btn-sm btn-outline-success shadow-sm">
-                                                                <i class="bi bi-box-arrow-in-left"></i> Return
-                                                            </a>
+                                                <form method="post" asp-action="Approve" asp-route-id="@borrow.BorrowId" class="d-inline">
+                                                    <button class="btn btn-sm btn-outline-success me-2 shadow-sm" type="submit">
+                                                        <i class="bi bi-check2"></i> Approve
+                                                    </button>
+                                                </form>
+                                                <form method="post" asp-action="Reject" asp-route-id="@borrow.BorrowId" class="d-inline">
+                                                    <button class="btn btn-sm btn-outline-danger shadow-sm" type="submit">
+                                                        <i class="bi bi-x"></i> Reject
+                                                    </button>
+                                                </form>
+                                            }
+                                            else if (borrow.Status == "Borrowing" || borrow.Status == "Borrowed")
+                                            {
+                                                <a asp-action="Renew" asp-route-id="@borrow.BorrowId" class="btn btn-sm btn-outline-primary me-2 shadow-sm">
+                                                    <i class="bi bi-arrow-clockwise"></i> Renew
+                                                </a>
+                                                <a asp-action="ReturnBook" asp-route-id="@borrow.BorrowId" class="btn btn-sm btn-outline-success shadow-sm">
+                                                    <i class="bi bi-box-arrow-in-left"></i> Return
+                                                </a>
                                             }
                                             else
                                             {
-                                                            <button class="btn btn-sm btn-secondary shadow-sm" disabled>Completed</button>
+                                                <button class="btn btn-sm btn-secondary shadow-sm" disabled>—</button>
                                             }
-                                                </td>
-                                            </tr>
+                                        </td>
+                                    </tr>
                                     index++;
                                 }
                             }
-                            </tbody>
-                        </table>
-                    </div>
+                        </tbody>
+                    </table>
+                </div>
             }
 
             <div class="text-center mt-4">
@@ -100,57 +125,57 @@
 </div>
 
 @section Styles {
-        <style>
-            body {
-                background: linear-gradient(135deg, #f8f9fa, #e3f2fd);
-                font-family: "Segoe UI", sans-serif;
-            }
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa, #e3f2fd);
+            font-family: "Segoe UI", sans-serif;
+        }
 
-            .card {
-                border-radius: 1rem;
-            }
+        .card {
+            border-radius: 1rem;
+        }
 
-            table thead th {
-                font-weight: 600;
-                font-size: 15px;
-            }
+        table thead th {
+            font-weight: 600;
+            font-size: 15px;
+        }
 
-            table tbody td {
-                font-size: 15px;
-            }
+        table tbody td {
+            font-size: 15px;
+        }
 
-            .table-hover tbody tr:hover {
-                background-color: #f0f8ff !important;
-                transition: 0.3s;
-            }
+        .table-hover tbody tr:hover {
+            background-color: #f0f8ff !important;
+            transition: 0.3s;
+        }
 
-            .badge {
-                font-size: 0.85rem;
-                border-radius: 0.75rem;
-            }
+        .badge {
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+        }
 
-            .btn {
-                transition: all 0.2s ease-in-out;
-            }
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
 
             .btn:hover {
                 transform: scale(1.05);
             }
 
-            .alert-info {
-                border-left: 5px solid #0d6efd;
-            }
-        </style>
+        .alert-info {
+            border-left: 5px solid #0d6efd;
+        }
+    </style>
 }
 
 @section Scripts {
-        <script>
-            document.querySelectorAll("a.btn-outline-primary, a.btn-outline-success").forEach(btn => {
-                btn.addEventListener("click", e => {
-                    if (!confirm("Are you sure you want to perform this action?")) {
-                        e.preventDefault();
-                    }
-                });
+    <script>
+        document.querySelectorAll("a.btn-outline-primary, a.btn-outline-success").forEach(btn => {
+            btn.addEventListener("click", e => {
+                if (!confirm("Are you sure you want to perform this action?")) {
+                    e.preventDefault();
+                }
             });
-        </script>
+        });
+    </script>
 }
