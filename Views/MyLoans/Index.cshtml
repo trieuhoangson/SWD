@@ -1,0 +1,287 @@
+@{
+    Layout = "_Layout";
+}
+@model IEnumerable<SWD.Models.BorrowTransaction>
+@{
+    ViewData["Title"] = ViewData["Title"] ?? "My Loans";
+    var isAdmin = ViewData["IsAdmin"] as bool? ?? false;
+}
+
+<div class="container mt-5 mb-5">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-gradient bg-primary text-white text-center rounded-top-4 py-3">
+            <h2 class="fw-bold mb-0">📚 @(isAdmin ? "All Loans (Admin View)" : "My Loans")</h2>
+        </div>
+
+        <div class="card-body p-4 bg-light rounded-bottom-4">
+            <!-- Renewal Result Alert -->
+            <div id="renewalAlert" class="alert alert-dismissible fade d-none" role="alert">
+                <span id="renewalMessage"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            @if (isAdmin && Model.Any())
+            {
+                <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
+                    <strong>Admin View:</strong> You are viewing all borrow transactions. Pending requests (Status: Processing) can be approved or rejected.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info text-center fs-5 shadow-sm mt-3">
+                    @(isAdmin ? "No borrow requests found." : "You have no borrowed books at the moment.")
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle bg-white shadow-sm rounded-3">
+                        <thead class="table-primary text-center">
+                            <tr>
+                                <th>#</th>
+                                @if (isAdmin)
+                                {
+                                    <th>Member</th>
+                                }
+                                <th>Book Title</th>
+                                <th>Borrow Date</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Fine (VND)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int index = 1;
+                            }
+                            @foreach (var borrow in Model)
+                            {
+                                foreach (var detail in borrow.BorrowDetails)
+                                {
+                                    var isOverdue = borrow.DueDate < DateTime.Now && borrow.Status != "Returned";
+                                    <tr class="@(isOverdue ? "table-danger bg-opacity-75" : "")" data-borrow-id="@borrow.BorrowId">
+                                        <td class="text-center fw-semibold">@index</td>
+                                        @if (isAdmin)
+                                        {
+                                            <td class="fw-semibold">@(borrow.User?.FullName ?? "N/A")</td>
+                                        }
+                                        <td class="fw-semibold">@detail.Book.Title</td>
+                                        <td>@borrow.BorrowDate.ToString("dd/MM/yyyy")</td>
+                                        <td class="due-date">@borrow.DueDate.ToString("dd/MM/yyyy")</td>
+                                        <td class="text-center">
+                                            @if (borrow.Status == "Processing")
+                                            {
+                                                <span class="badge bg-secondary text-light px-3 py-2">Processing</span>
+                                            }
+                                            else if (borrow.Status == "Borrowing" || borrow.Status == "Borrowed")
+                                            {
+                                                <span class="badge bg-warning text-dark px-3 py-2">Borrowing</span>
+                                            }
+                                            else if (isOverdue)
+                                            {
+                                                <span class="badge bg-danger bg-gradient px-3 py-2">Overdue</span>
+                                            }
+                                            else if (borrow.Status == "Returned")
+                                            {
+                                                <span class="badge bg-success bg-gradient px-3 py-2">Returned</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-info text-dark px-3 py-2">Unknown</span>
+                                            }
+                                        </td>
+                                        <td class="text-end fw-bold text-danger">
+                                            @(borrow.FineAmount.HasValue ? borrow.FineAmount.Value.ToString("N0") : "0")
+                                        </td>
+                                        <td class="text-center">
+                                            @if (borrow.Status == "Processing" && isAdmin)
+                                            {
+                                                <form method="post" asp-action="Approve" asp-route-id="@borrow.BorrowId" class="d-inline">
+                                                    <button class="btn btn-sm btn-outline-success me-2 shadow-sm" type="submit">
+                                                        <i class="bi bi-check2"></i> Approve
+                                                    </button>
+                                                </form>
+                                                <form method="post" asp-action="Reject" asp-route-id="@borrow.BorrowId" class="d-inline">
+                                                    <button class="btn btn-sm btn-outline-danger shadow-sm" type="submit">
+                                                        <i class="bi bi-x"></i> Reject
+                                                    </button>
+                                                </form>
+                                            }
+                                            else if (borrow.Status == "Borrowing" || borrow.Status == "Borrowed")
+                                            {
+                                                @* Only show Renew/Return buttons for the owner of the book *@
+                                                var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                                                var isOwner = userIdClaim != null && borrow.UserId.ToString() == userIdClaim;
+                                                
+                                                @if (isOwner)
+                                                {
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-primary me-2 shadow-sm js-renewal" 
+                                                            data-borrow-id="@borrow.BorrowId">
+                                                        <i class="bi bi-arrow-clockwise"></i> Renew
+                                                    </button>
+                                                    <a asp-action="ReturnBook" asp-route-id="@borrow.BorrowId" class="btn btn-sm btn-outline-success shadow-sm">
+                                                        <i class="bi bi-box-arrow-in-left"></i> Return
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-secondary shadow-sm" disabled>—</button>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-secondary shadow-sm" disabled>—</button>
+                                            }
+                                        </td>
+                                    </tr>
+                                    index++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="text-center mt-4">
+                <a asp-controller="Books" asp-action="Index" class="btn btn-outline-primary px-4 py-2 shadow-sm rounded-pill">
+                    ← Back to Book List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa, #e3f2fd);
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        .card {
+            border-radius: 1rem;
+        }
+
+        table thead th {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        table tbody td {
+            font-size: 15px;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f0f8ff !important;
+            transition: 0.3s;
+        }
+
+        .badge {
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+        }
+
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
+
+            .btn:hover {
+                transform: scale(1.05);
+            }
+
+        .alert-info {
+            border-left: 5px solid #0d6efd;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        // Renewal functionality - corresponds to selectRenewal(borrowId) -> requestRenewal(borrowId) in sequence diagram
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.js-renewal').forEach(button => {
+                button.addEventListener('click', async function () {
+                    const borrowId = this.getAttribute('data-borrow-id');
+                    
+                    if (!confirm('Are you sure you want to renew this book?')) {
+                        return;
+                    }
+
+                    // Disable button during request
+                    this.disabled = true;
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+
+                    try {
+                        // Call RequestRenewal API - corresponds to requestRenewal(borrowId) in sequence diagram
+                        const response = await fetch(`/MyLoans/RequestRenewal?borrowId=${borrowId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        });
+
+                        const data = await response.json();
+                        const alertEl = document.getElementById('renewalAlert');
+                        const messageEl = document.getElementById('renewalMessage');
+
+                        if (data.ok) {
+                            // Success - show success message and update due date
+                            alertEl.className = 'alert alert-success alert-dismissible fade show';
+                            messageEl.textContent = data.msg + (data.newDueDate ? ` New due date: ${data.newDueDate}` : '');
+                            
+                            // Update due date in the table
+                            const row = this.closest('tr');
+                            const dueDateCell = row.querySelector('.due-date');
+                            if (dueDateCell && data.newDueDate) {
+                                dueDateCell.textContent = data.newDueDate;
+                            }
+
+                            // Reload page after 2 seconds to refresh status
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            // Error - show error message
+                            alertEl.className = 'alert alert-danger alert-dismissible fade show';
+                            messageEl.textContent = data.msg || 'Renewal request failed.';
+                            
+                            // Re-enable button
+                            this.disabled = false;
+                            this.innerHTML = originalText;
+                        }
+
+                        alertEl.classList.remove('d-none');
+                    } catch (error) {
+                        console.error('Error:', error);
+                        const alertEl = document.getElementById('renewalAlert');
+                        const messageEl = document.getElementById('renewalMessage');
+                        alertEl.className = 'alert alert-danger alert-dismissible fade show';
+                        messageEl.textContent = 'An error occurred while processing your request.';
+                        alertEl.classList.remove('d-none');
+                        
+                        // Re-enable button
+                        this.disabled = false;
+                        this.innerHTML = originalText;
+                    }
+                });
+            });
+        });
+
+        // Return book confirmation
+        document.querySelectorAll("a.btn-outline-success").forEach(btn => {
+            if (btn.textContent.includes('Return')) {
+                btn.addEventListener("click", e => {
+                    if (!confirm("Are you sure you want to return this book?")) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        });
+    </script>
+}
+

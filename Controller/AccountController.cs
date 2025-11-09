@@ -76,19 +76,36 @@ namespace SWD.Controllers
         }
 
         [HttpGet]
-        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
         public async Task<IActionResult> Logout()
         {
-            // 1) Sign-out đúng cookie scheme
+            // Sign out from authentication
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-            // 2) Xóa toàn bộ cookie hiện có (kể cả cookie khác tên)
+            
+            // Clear all cookies to ensure complete logout
             foreach (var key in Request.Cookies.Keys)
+            {
                 Response.Cookies.Delete(key);
+            }
+            
+            // Redirect to Book List page
+            return RedirectToAction("Index", "Books");
+        }
 
-            // 3) Chuyển về trang Login
-            return RedirectToAction("Login", "Account");
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LogoutPost()
+        {
+            // Sign out from authentication
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            
+            // Clear all cookies to ensure complete logout
+            foreach (var key in Request.Cookies.Keys)
+            {
+                Response.Cookies.Delete(key);
+            }
+            
+            // Redirect to Book List page
+            return RedirectToAction("Index", "Books");
         }
 
 
@@ -100,7 +117,8 @@ namespace SWD.Controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Name, user.FullName ?? user.Email),
-                new Claim(ClaimTypes.Email, user.Email ?? "")
+                new Claim(ClaimTypes.Email, user.Email ?? ""),
+                new Claim(ClaimTypes.Role, user.Role ?? "Member")
             };
             var id = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             await HttpContext.SignInAsync(
