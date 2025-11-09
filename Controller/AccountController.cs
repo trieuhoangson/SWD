@@ -75,12 +75,37 @@ namespace SWD.Controllers
             return RedirectToAction("Index", "Books");
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Logout()
+        {
+            // Sign out from authentication
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            
+            // Clear all cookies to ensure complete logout
+            foreach (var key in Request.Cookies.Keys)
+            {
+                Response.Cookies.Delete(key);
+            }
+            
+            // Redirect to Book List page
+            return RedirectToAction("Index", "Books");
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> LogoutPost()
         {
+            // Sign out from authentication
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction(nameof(Login));
+            
+            // Clear all cookies to ensure complete logout
+            foreach (var key in Request.Cookies.Keys)
+            {
+                Response.Cookies.Delete(key);
+            }
+            
+            // Redirect to Book List page
+            return RedirectToAction("Index", "Books");
         }
 
 
@@ -91,7 +116,8 @@ namespace SWD.Controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Name, user.FullName ?? user.Email),
-                new Claim(ClaimTypes.Email, user.Email ?? "")
+                new Claim(ClaimTypes.Email, user.Email ?? ""),
+                new Claim(ClaimTypes.Role, user.Role ?? "Member")
             };
             var id = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             await HttpContext.SignInAsync(

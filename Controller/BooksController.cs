@@ -155,7 +155,7 @@ namespace SWD.Controllers
             _context.BorrowTransactions.Add(borrow);
             await _context.SaveChangesAsync();
 
-            return Json(new { ok = true, redirect = Url.Action("Index", "Borrow", new { userId }) });
+            return Json(new { ok = true, redirect = Url.Action("Index", "MyLoans", new { userId }) });
         }
 
         [HttpPost]

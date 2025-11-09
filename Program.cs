@@ -1,4 +1,5 @@
 using SWD.Models;
+using SWD.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;   
 
@@ -6,6 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<LibraryManagementSystemContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyCnn")));
+
+builder.Services.AddScoped<BorrowingService>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
